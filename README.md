@@ -3,6 +3,12 @@
 
 A comprehensive web application designed for traders and researchers at multi-frequency trading (MFT) firms. The system ingests live tick data from Binance WebSocket streams, processes and stores the data, computes quantitative analytics, and presents interactive visualizations for statistical arbitrage, risk-premia harvesting, and market analysis.
 
+
+
+https://github.com/user-attachments/assets/d705e16f-313a-4a21-8c17-d8b680dff192
+
+
+
 ## Features
 
 ### Real-Time Data Ingestion
