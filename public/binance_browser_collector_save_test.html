@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Binance WebSocket Data Collector</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #1a237e 0%, #263238 100%);
+      color: #f5f5f5;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 2rem;
+      color: #00bcd4;
+    }
+
+    .control-panel {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    input, select, button {
+      padding: 12px 20px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #00bcd4;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    input::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    button:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .btn-connect {
+      background: #00bcd4;
+      border-color: #00bcd4;
+      color: #1a237e;
+    }
+
+    .btn-disconnect {
+      background: #ff5252;
+      border-color: #ff5252;
+      color: #fff;
+    }
+
+    .btn-download {
+      background: #4caf50;
+      border-color: #4caf50;
+      color: #fff;
+    }
+
+    .btn-clear {
+      background: #ff9800;
+      border-color: #ff9800;
+      color: #fff;
+    }
+
+    .status {
+      padding: 10px 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-weight: 500;
+    }
+
+    .status.connected {
+      background: rgba(76, 175, 80, 0.2);
+      border: 1px solid #4caf50;
+      color: #4caf50;
+    }
+
+    .status.disconnected {
+      background: rgba(255, 82, 82, 0.2);
+      border: 1px solid #ff5252;
+      color: #ff5252;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.7);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #00bcd4;
+    }
+
+    .data-table {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    th {
+      background: rgba(0, 188, 212, 0.2);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+
+    tr:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .price-up {
+      color: #4caf50;
+    }
+
+    .price-down {
+      color: #ff5252;
+    }
+
+    #dataDisplay {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    #dataDisplay::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #dataDisplay::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    #dataDisplay::-webkit-scrollbar-thumb {
+      background: rgba(0, 188, 212, 0.5);
+      border-radius: 4px;
+    }
+
+    #dataDisplay::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 188, 212, 0.7);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚡ Binance WebSocket Data Collector</h1>
+
+    <div class="control-panel">
+      <div class="input-group">
+        <input type="text" id="symbol1" placeholder="Symbol 1 (e.g., BTCUSDT)" value="BTCUSDT">
+        <input type="text" id="symbol2" placeholder="Symbol 2 (e.g., ETHUSDT)" value="ETHUSDT">
+        <button id="connectBtn" class="btn-connect">Connect</button>
+        <button id="disconnectBtn" class="btn-disconnect" style="display: none;">Disconnect</button>
+      </div>
+
+      <div class="input-group">
+        <button id="downloadBtn" class="btn-download">Download CSV</button>
+        <button id="clearBtn" class="btn-clear">Clear Data</button>
+      </div>
+
+      <div id="status" class="status disconnected">Disconnected</div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">Total Ticks</div>
+        <div class="stat-value" id="totalTicks">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Data Size</div>
+        <div class="stat-value" id="dataSize">0 KB</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Duration</div>
+        <div class="stat-value" id="duration">00:00:00</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Ticks/Second</div>
+        <div class="stat-value" id="tickRate">0</div>
+      </div>
+    </div>
+
+    <div class="data-table">
+      <h3 style="margin-bottom: 15px;">Live Data Stream</h3>
+      <div id="dataDisplay">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Symbol</th>
+              <th>Price</th>
+              <th>Quantity</th>
+            </tr>
+          </thead>
+          <tbody id="dataBody">
+            <tr>
+              <td colspan="4" style="text-align: center; color: rgba(255, 255, 255, 0.5);">
+                No data yet. Connect to start streaming.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let ws = null;
+    let tickData = [];
+    let startTime = null;
+    let durationInterval = null;
+    let lastPrices = {};
+
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const status = document.getElementById('status');
+    const dataBody = document.getElementById('dataBody');
+    const totalTicksEl = document.getElementById('totalTicks');
+    const dataSizeEl = document.getElementById('dataSize');
+    const durationEl = document.getElementById('duration');
+    const tickRateEl = document.getElementById('tickRate');
+
+    connectBtn.addEventListener('click', connect);
+    disconnectBtn.addEventListener('click', disconnect);
+    downloadBtn.addEventListener('click', downloadCSV);
+    clearBtn.addEventListener('click', clearData);
+
+    function connect() {
+      const symbol1 = document.getElementById('symbol1').value.trim().toLowerCase();
+      const symbol2 = document.getElementById('symbol2').value.trim().toLowerCase();
+
+      if (!symbol1 || !symbol2) {
+        alert('Please enter both symbols');
+        return;
+      }
+
+      const streams = `${symbol1}@trade/${symbol2}@trade`;
+      const wsUrl = `wss://stream.binance.com:9443/stream?streams=${streams}`;
+
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        status.textContent = `Connected: ${symbol1.toUpperCase()} / ${symbol2.toUpperCase()}`;
+        status.className = 'status connected';
+        connectBtn.style.display = 'none';
+        disconnectBtn.style.display = 'inline-block';
+        startTime = Date.now();
+        startDurationTimer();
+      };
+
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        if (message.data) {
+          const tick = {
+            timestamp: message.data.T,
+            symbol: message.data.s,
+            price: parseFloat(message.data.p),
+            quantity: parseFloat(message.data.q)
+          };
+          
+          tickData.push(tick);
+          updateDisplay(tick);
+          updateStats();
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        status.textContent = 'Connection Error';
+        status.className = 'status disconnected';
+      };
+
+      ws.onclose = () => {
+        status.textContent = 'Disconnected';
+        status.className = 'status disconnected';
+        connectBtn.style.display = 'inline-block';
+        disconnectBtn.style.display = 'none';
+        stopDurationTimer();
+      };
+    }
+
+    function disconnect() {
+      if (ws) {
+        ws.close();
+        ws = null;
+      }
+    }
+
+    function updateDisplay(tick) {
+      const time = new Date(tick.timestamp).toLocaleTimeString();
+      const priceChange = lastPrices[tick.symbol] ? tick.price - lastPrices[tick.symbol] : 0;
+      const priceClass = priceChange > 0 ? 'price-up' : priceChange < 0 ? 'price-down' : '';
+      
+      lastPrices[tick.symbol] = tick.price;
+
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${time}</td>
+        <td>${tick.symbol}</td>
+        <td class="${priceClass}">${tick.price.toFixed(8)}</td>
+        <td>${tick.quantity.toFixed(8)}</td>
+      `;
+
+      if (dataBody.children.length === 1 && dataBody.children[0].children.length === 1) {
+        dataBody.innerHTML = '';
+      }
+
+      dataBody.insertBefore(row, dataBody.firstChild);
+
+      if (dataBody.children.length > 50) {
+        dataBody.removeChild(dataBody.lastChild);
+      }
+    }
+
+    function updateStats() {
+      totalTicksEl.textContent = tickData.length.toLocaleString();
+      
+      const sizeInBytes = JSON.stringify(tickData).length;
+      const sizeInKB = (sizeInBytes / 1024).toFixed(2);
+      dataSizeEl.textContent = `${sizeInKB} KB`;
+
+      if (startTime) {
+        const elapsed = (Date.now() - startTime) / 1000;
+        const rate = (tickData.length / elapsed).toFixed(2);
+        tickRateEl.textContent = rate;
+      }
+    }
+
+    function startDurationTimer() {
+      durationInterval = setInterval(() => {
+        if (startTime) {
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
+          const hours = Math.floor(elapsed / 3600).toString().padStart(2, '0');
+          const minutes = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
+          const seconds = (elapsed % 60).toString().padStart(2, '0');
+          durationEl.textContent = `${hours}:${minutes}:${seconds}`;
+        }
+      }, 1000);
+    }
+
+    function stopDurationTimer() {
+      if (durationInterval) {
+        clearInterval(durationInterval);
+        durationInterval = null;
+      }
+    }
+
+    function downloadCSV() {
+      if (tickData.length === 0) {
+        alert('No data to download');
+        return;
+      }
+
+      let csv = 'Timestamp,Symbol,Price,Quantity\n';
+      tickData.forEach(tick => {
+        csv += `${tick.timestamp},${tick.symbol},${tick.price},${tick.quantity}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `binance_data_${Date.now()}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function clearData() {
+      if (confirm('Are you sure you want to clear all collected data?')) {
+        tickData = [];
+        dataBody.innerHTML = `
+          <tr>
+            <td colspan="4" style="text-align: center; color: rgba(255, 255, 255, 0.5);">
+              No data yet. Connect to start streaming.
+            </td>
+          </tr>
+        `;
+        lastPrices = {};
+        updateStats();
+      }
+    }
+
+    localStorage.setItem('binanceCollectorData', JSON.stringify(tickData));
+    setInterval(() => {
+      if (tickData.length > 0) {
+        localStorage.setItem('binanceCollectorData', JSON.stringify(tickData));
+      }
+    }, 5000);
+  </script>
+</body>
+</html>
