@@ -1,3 +1,4 @@
+
 # Real-Time Trading Analytics Dashboard
 
 A comprehensive web application designed for traders and researchers at multi-frequency trading (MFT) firms. The system ingests live tick data from Binance WebSocket streams, processes and stores the data, computes quantitative analytics, and presents interactive visualizations for statistical arbitrage, risk-premia harvesting, and market analysis.
